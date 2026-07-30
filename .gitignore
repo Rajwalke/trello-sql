@@ -1,0 +1,31 @@
+# node modules (very important)
+node_modules/
+
+# build / dist folders
+dist/
+build/
+
+# environment variables
+.env
+
+# logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# editor files
+.vscode/
+.idea/
+
+# cache
+.cache/
+.parcel-cache/
+
+# coverage reports
+coverage/
