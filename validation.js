@@ -16,8 +16,7 @@ const signinSchema = z.object({
 })
 
 const organisationSchema = z.object({
-    title: z.string().min(2),
-    description: z.string().min(3)
+    orgName: z.string().min(2),
 })
 module.exports = {
     signupSchema, signinSchema, organisationSchema

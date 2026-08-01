@@ -92,11 +92,11 @@ app.post("/organisation", userAuth, async (req, res) => {
         });
         return;
     }
-    const title = data.title;
-    const description = data.description;
+    const orgName = data.orgName;
+    // const description = data.description;
     const userid = req.userid;
 
-    const createOrg = await connectionpoll.query(`INSERT INTO organisation (title,description,adminId) VALUES ($1,$2,$3) RETURNING id;`, [title, description, userid]);
+    const createOrg = await connectionpoll.query(`INSERT INTO organisation (orgName,adminId) VALUES ($1,$2) RETURNING id;`, [orgName,userid]);
     console.log("create Org", createOrg);
     if (createOrg.rows.length === 0) {
         res.status(403).json({
@@ -107,6 +107,48 @@ app.post("/organisation", userAuth, async (req, res) => {
     res.json({
         adminId: userid,
         message: "Oragnisation create!"
+    })
+})
+
+app.post("/organisation/:orgid",userAuth,async(req,res)=>{
+    const orgId=req.params.orgid;
+    const userEmail=req.body.email;
+    const userid = req.userid;
+
+    const orgInfo=await connectionpoll.query(`SELECT * from organisation WHERE id=$1`,[orgId]);
+
+    if(orgInfo?.rows.length===0 || orgInfo?.rows[0]?.adminid!==userid){
+        res.status(403).json({
+            message:"You are not admin or organisation not exist"
+        });
+        return;
+    }
+    // member is not alreayd inside the organisation
+    let memberid=await connectionpoll.query(`SELECT id from users WHERE email=$1`,[userEmail]);
+   
+    if(memberid?.rows.length===0){
+        res.status(403).json({
+            message:"This email is not register ! "
+        });
+        return;
+    }else{
+        memberid=memberid?.rows[0]?.id;
+    }
+    const isAlreadyMember=await connectionpoll.query(`SELECT * FROM members WHERE userid=$1 AND orgid=$2`,[memberid,orgId]);
+
+    if(isAlreadyMember?.rows.length>=1){
+        res.status(403).json({
+            message:"This user is alredy member of the organisation."
+        });
+        return;
+    }
+
+    const addMember=await connectionpoll.query(`INSERT INTO members (orgid,userid) VALUES ($1,$2) RETURNING id;`,[orgId,memberid]);
+    console.log("addMember",addMember)
+    
+    res.json({
+        id:addMember?.rows[0]?.id,
+        message:"new member is added"
     })
 })
 
