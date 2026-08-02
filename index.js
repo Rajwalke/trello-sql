@@ -8,6 +8,7 @@ const { userAuth } = require("./userAuth.js")
 const cookieparser = require('cookie-parser');
 
 
+
 const connectionpoll = new Pool({
     connectionString: "postgresql://neondb_owner:npg_a5tSXmRosNY4@ep-sparkling-water-aunkkyvt-pooler.c-10.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
 })
@@ -152,4 +153,57 @@ app.post("/organisation/:orgid",userAuth,async(req,res)=>{
     })
 })
 
+app.delete("/organisation/:orgid",userAuth,async(req,res)=>{
+    const userId=req.userid;
+    const memberId=req.query.memberId;
+    const orgId=req.params.orgid;
+    console.log(userId,memberId,orgId);
+
+    const orgInfo=await connectionpoll.query(`SELECT * FROM organisation WHERE id=$1`,[orgId]);
+
+    if(orgInfo?.rows.length===0 || orgInfo?.rows[0]?.adminid!==userId){
+        res.status(403).json({
+            message:"You are not admin or organisation ot exist!"
+        });
+        return;
+    }
+
+    const deletMember=await connectionpoll.query(`DELETE FROM members WHERE orgid=$1 AND userid=$2`,[orgId,memberId]);
+    if(deletMember.rowCount===0){
+        res.status(403).json({
+            message:"This member not exist inside organisation!"
+        });
+        return
+    }
+    console.log("Delete :",deletMember)
+
+    res.json({
+        message:"Member is delete."
+    })
+})
+
+app.get("/organisation/:orgid/members",userAuth,async(req,res)=>{
+    const orgId=req.params.orgid;
+    const userId=req.userid;
+    const orgInfo=await connectionpoll.query(`SELECT * FROM organisation WHERE id=$1`,[orgId]);
+
+    if(orgInfo?.rows.length===0 || orgInfo?.rows[0]?.adminid!==userId){
+        res.status(403).json({
+            message:"You are not admin or organisation ot exist!"
+        });
+        return;
+    }
+
+    const allMembers=await connectionpoll.query("SELECT * FROM members WHERE orgid=$1",[orgId]);
+    if(allMembers?.rows.length===0){
+        res.status(403).json({
+            message:"No Memeber exist in organisation!"
+        });
+        return;
+    }
+
+    res.json({
+        members:allMembers?.rows
+    });
+})
 app.listen(4000);
