@@ -105,6 +105,14 @@ app.post("/organisation", userAuth, async (req, res) => {
         });
         return;
     }
+    const insertIntoMember=await connectionpoll.query("INSERT INTO members (orgid,userid) VALUES ($1,$2) RETURNING id;",[createOrg.rows[0].id,userid]);
+    if(insertIntoMember.rows.length===0){
+        res.status(403).json({
+            message:"Not add inside the member"
+        });
+        return;
+    }
+    // `INSERT INTO members (orgid,userid) VALUES ($1,$2) RETURNING id;`,[orgId,memberid]
     res.json({
         adminId: userid,
         message: "Oragnisation create!"
@@ -117,7 +125,7 @@ app.post("/organisation/:orgid",userAuth,async(req,res)=>{
     const userid = req.userid;
 
     const orgInfo=await connectionpoll.query(`SELECT * from organisation WHERE id=$1`,[orgId]);
-
+    console.log("Org Info",orgInfo?.rows[0]);
     if(orgInfo?.rows.length===0 || orgInfo?.rows[0]?.adminid!==userid){
         res.status(403).json({
             message:"You are not admin or organisation not exist"
@@ -205,5 +213,52 @@ app.get("/organisation/:orgid/members",userAuth,async(req,res)=>{
     res.json({
         members:allMembers?.rows
     });
+});
+
+app.post("/organisation/:orgid/board",userAuth,async(req,res)=>{
+    const userid=req.userid;
+    const orgid=req.params.orgid;
+    const boardName=req.body.boardName;
+    console.log(userid,orgid,boardName);
+    //user should member or admin
+    const memberInfo=await connectionpoll.query("SELECT * FROM members WHERE orgid=$1 AND userid=$2",[orgid,userid]);
+    console.log("Member Info",memberInfo?.rows[0]);
+    if(memberInfo.rows.length===0){
+        res.status(403).json({
+            message:"You are not Member of organisation!"
+        });
+        return;
+    };
+
+    const createBoard=await connectionpoll.query("INSERT INTO boards (boardname,orgid,board_created_by) VALUES ($1,$2,$3) RETURNING id;",[boardName,orgid,userid]);
+    if(createBoard.rows.length===0){
+        res.json({
+            message:"Their is some issue! Board is not create"
+        });
+        return;
+    };
+    res.json({
+        id:createBoard?.rows[0]?.id,
+        message:"Board is created! "
+    });
+
 })
+
+// get all boards as per organization
+app.get("/organisation/:orgid/board",async(req,res)=>{
+    const orgid=req.params.orgid;
+
+    const allBoardsOrg=await connectionpoll.query("SELECT * FROM boards WHERE orgid=$1",[orgid]);
+    console.log("All boars",allBoardsOrg?.rows);
+    if(allBoardsOrg?.rows.length===0){
+        res.json({
+            message:"No board founc for this orgaisation!"
+        });
+        return;
+    }
+    res.json({
+        allboard:allBoardsOrg?.rows
+    })
+})
+
 app.listen(4000);
