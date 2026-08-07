@@ -252,7 +252,7 @@ app.get("/organisation/:orgid/board",async(req,res)=>{
     console.log("All boars",allBoardsOrg?.rows);
     if(allBoardsOrg?.rows.length===0){
         res.json({
-            message:"No board founc for this orgaisation!"
+            message:"No board found for this orgaisation!"
         });
         return;
     }
@@ -260,5 +260,29 @@ app.get("/organisation/:orgid/board",async(req,res)=>{
         allboard:allBoardsOrg?.rows
     })
 })
-
+// this api is for the create issue post api 
+app.post("/:boardid/issues",async(req,res)=>{
+    const issue=req.body.query;
+    const userid=req.userid;
+    const boardid=req.params.boardid;
+    const checkUser=await connectionpoll.query("SELECT * FROM users WHERE userid=$1",[userid]);
+    if(checkUser.rows.length===0){
+        res.status(403).json({
+            message:"user is not valide"
+        });
+        return;
+    }
+    console.log("user is Valide you can go ahe");
+    const issueCreate=await connectionpoll.query("INSERT INTO issues (issue,userid,boardid) VALUES ($1,$2,$3) RETURNING id;",[issue,userid,boardid]);
+    if(issueCreate.rows.length===0){
+        res.status(403).json({
+            message:"Issue is not create!.."
+        });
+        return;
+    }
+    res.json({
+        id:issueCreate.rows[0].id,
+        message:"Issue is create"
+    });
+});
 app.listen(4000);
