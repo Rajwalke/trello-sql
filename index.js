@@ -310,26 +310,37 @@ app.get("/:boardid/issues",userAuth,async(req,res)=>{
 // edit staus of task
 app.post("/:boardid/:issueid/:status",userAuth,async(req,res)=>{
     const boardid=req.params.boardid;
-    const status=req.params.status;
+    const status=req.params.status.toLowerCase();
     const issueid=req.params.issueid;
     const userid=req.userid;
-
-    const currIssue=await connectionpoll.query("SELECT * FROM issues WHERE id=$1",[issueid]);
-    if(currIssue.rows.length===0){
+    const validStatus = ["done", "in_progress", "pending"];
+    
+    if(!validStatus.includes(status)){
         res.status(403).json({
-            message:"Invalide issue found!"
+            message:"Status is not valide !"
         });
         return;
     }
-    
+
+    const currIssue=await connectionpoll.query("SELECT * FROM issues WHERE id=$1 AND boardid=$2",[issueid,boardid]);
+
     if(currIssue.rows.length===0){
         res.status(500).json({
-            message:"Error on issue !"
+            message:"Not get the issue!"
         });
-        return;
+       return;
     };
 
+    const updateStatus=await connectionpoll.query("UPDATE issues SET status=$1 WHERE id=$2 AND boardid=$3",[status,issueid,boardid]);
+    if(updateStatus.rowCount===0){
+        res.status(403).json({
+            message:"Oops! status is not update "
+        });
+        return;
+    }
+    res.json({
+        message:"Status is updated "
+    })
 });
 
-app.post()
 app.listen(4000);
