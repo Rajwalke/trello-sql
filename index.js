@@ -336,12 +336,30 @@ app.post("/:boardid/:issueid/:status",userAuth,async(req,res)=>{
         res.status(403).json({
             message:"Oops! status is not update "
         });
-        
+
         return;
     }
     res.json({
         message:"Status is updated "
     })
 });
+
+// delete issue
+app.delete("/boards/:issueid/",async(req,res)=>{
+    const issueid=req.params.issueid;
+
+    const issueDelet=await connectionpoll.query("DELETE FROM issues WHERE id=$1;",[issueid]);
+    if(issueDelet.rowCount===0){
+        res.status(403).json({
+            message:"Somthing went wrong! issue is not delete"
+        });
+        return;
+    }
+
+    res.json({
+        message:"Issue deleted!"
+    });
+    
+})
 
 app.listen(4000);
