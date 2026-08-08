@@ -336,6 +336,7 @@ app.post("/:boardid/:issueid/:status",userAuth,async(req,res)=>{
         res.status(403).json({
             message:"Oops! status is not update "
         });
+        
         return;
     }
     res.json({
