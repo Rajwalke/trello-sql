@@ -273,7 +273,7 @@ app.post("/:boardid/issues",async(req,res)=>{
         return;
     }
     console.log("user is Valide you can go ahe");
-    const issueCreate=await connectionpoll.query("INSERT INTO issues (issue,userid,boardid) VALUES ($1,$2,$3) RETURNING id;",[issue,userid,boardid]);
+    const issueCreate=await connectionpoll.query("INSERT INTO issues (issue,userid,boardid,status) VALUES ($1,$2,$3,$4) RETURNING id;",[issue,userid,boardid,"pending"]);
     if(issueCreate.rows.length===0){
         res.status(403).json({
             message:"Issue is not create!.."
@@ -285,4 +285,51 @@ app.post("/:boardid/issues",async(req,res)=>{
         message:"Issue is create"
     });
 });
+
+// api that divide task as pending,in progess,done
+app.get("/:boardid/issues",userAuth,async(req,res)=>{
+    const boardid=req.params.boardid;
+    try{
+        const doneIssues=await connectionpoll.query("SELECT * FROM issues WHERE boardid=$1 AND status='done'",[boardid]);
+        const pendingIssues=await connectionpoll.query("SELECT * FROM issues WHERE boardid=$1 AND status='pending'",[boardid]);
+        const inProgressIssues=await connectionpoll.query("SELECT * FROM issues WHERE boardid=$1 AND status='in_progress'",[boardid]);
+    
+        res.json({
+            doneIssues:doneIssues?.rows,
+            pendingIssues:pendingIssues?.rows,
+            inProgressIssues:inProgressIssues?.rows
+        });
+
+        }catch(err){
+            res.status(403).json({
+            error:err.message
+            })
+        }
+});
+
+// edit staus of task
+app.post("/:boardid/:issueid/:status",userAuth,async(req,res)=>{
+    const boardid=req.params.boardid;
+    const status=req.params.status;
+    const issueid=req.params.issueid;
+    const userid=req.userid;
+
+    const currIssue=await connectionpoll.query("SELECT * FROM issues WHERE id=$1",[issueid]);
+    if(currIssue.rows.length===0){
+        res.status(403).json({
+            message:"Invalide issue found!"
+        });
+        return;
+    }
+    
+    if(currIssue.rows.length===0){
+        res.status(500).json({
+            message:"Error on issue !"
+        });
+        return;
+    };
+
+});
+
+app.post()
 app.listen(4000);
