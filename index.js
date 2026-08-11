@@ -14,7 +14,7 @@ const connectionpoll = new Pool({
 })
 app.use(express.json());
 app.use(cookieparser())
-
+// Signup ✅
 app.post("/signup", async (req, res) => {
 
     const { data, success, error } = signupSchema.safeParse(req.body);
@@ -45,7 +45,7 @@ app.post("/signup", async (req, res) => {
     })
 
 })
-
+// Signin ✅
 app.post("/signin", async (req, res) => {
 
     const { data, success, error } = signinSchema.safeParse(req.body);
@@ -84,7 +84,7 @@ app.post("/signin", async (req, res) => {
     })
 
 })
-
+//create organisation and add admin as member✅ 
 app.post("/organisation", userAuth, async (req, res) => {
     const { data, success, error } = organisationSchema.safeParse(req.body);
     if (!success) {
@@ -118,14 +118,14 @@ app.post("/organisation", userAuth, async (req, res) => {
         message: "Oragnisation create!"
     })
 })
-
-app.post("/organisation/:orgid",userAuth,async(req,res)=>{
+// add member inside the organisation ✅
+app.post("/organisation/:orgid",userAuth,async(req,res)=>{ 
     const orgId=req.params.orgid;
     const userEmail=req.body.email;
     const userid = req.userid;
 
     const orgInfo=await connectionpoll.query(`SELECT * from organisation WHERE id=$1`,[orgId]);
-    console.log("Org Info",orgInfo?.rows[0]);
+    // console.log("Org Info",orgInfo?.rows[0]);
     if(orgInfo?.rows.length===0 || orgInfo?.rows[0]?.adminid!==userid){
         res.status(403).json({
             message:"You are not admin or organisation not exist"
@@ -137,7 +137,7 @@ app.post("/organisation/:orgid",userAuth,async(req,res)=>{
    
     if(memberid?.rows.length===0){
         res.status(403).json({
-            message:"This email is not register ! "
+            message:"This email is not register or you added a invalid email ! "
         });
         return;
     }else{
@@ -160,7 +160,7 @@ app.post("/organisation/:orgid",userAuth,async(req,res)=>{
         message:"new member is added"
     })
 })
-
+// Delete member from organisation ✅
 app.delete("/organisation/:orgid",userAuth,async(req,res)=>{
     const userId=req.userid;
     const memberId=req.query.memberId;
@@ -189,7 +189,7 @@ app.delete("/organisation/:orgid",userAuth,async(req,res)=>{
         message:"Member is delete."
     })
 })
-
+// Get all members of organisation ✅
 app.get("/organisation/:orgid/members",userAuth,async(req,res)=>{
     const orgId=req.params.orgid;
     const userId=req.userid;
@@ -215,6 +215,7 @@ app.get("/organisation/:orgid/members",userAuth,async(req,res)=>{
     });
 });
 
+// Create board inside the organisation ✅
 app.post("/organisation/:orgid/board",userAuth,async(req,res)=>{
     const userid=req.userid;
     const orgid=req.params.orgid;
@@ -244,9 +245,18 @@ app.post("/organisation/:orgid/board",userAuth,async(req,res)=>{
 
 })
 
-// get all boards as per organization
-app.get("/organisation/:orgid/board",async(req,res)=>{
+// get all boards as per organization ✅
+app.get("/organisation/:orgid/boards",userAuth,async(req,res)=>{
     const orgid=req.params.orgid;
+    const userid=req.userid;
+
+    const isMember=await connectionpoll.query("SELECT * FROM members WHERE orgid=$1 AND userid=$2",[orgid,userid]);
+    if(isMember.rows.length===0){
+        res.status(403).json({
+            message:"this Info not provide to you..you are not member of this organisation"
+        });
+        return;
+    }
 
     const allBoardsOrg=await connectionpoll.query("SELECT * FROM boards WHERE orgid=$1",[orgid]);
     console.log("All boars",allBoardsOrg?.rows);
@@ -260,8 +270,49 @@ app.get("/organisation/:orgid/board",async(req,res)=>{
         allboard:allBoardsOrg?.rows
     })
 })
-// this api is for the create issue post api 
-app.post("/:boardid/issues",async(req,res)=>{
+// Deleet the baord from organisation ✅
+app.delete("/organisation/:orgid/boards",userAuth,async(req,res)=>{
+    const userid=req.userid;
+    const orgid=req.params.orgid;
+    const boardid=req.query.boardid;
+    // console.log(userid,orgid,boardid);
+
+    // if board is created by that user then only board is deleted  or you are admin of organisation 
+    const admin=await connectionpoll.query("SELECT adminid FROM organisation WHERE id=$1",[orgid]);
+    // console.log(admin);
+    if(admin?.rows[0].adminid!==userid){
+        console.log("You are not admin of this organisation");
+    }
+    
+    const boardInfo=await connectionpoll.query("SELECT * FROM boards WHERE id=$1 AND board_created_by=$2",[boardid,userid]);
+    if(boardInfo?.rows.length===0){
+        res.status(403).json({
+            message:"You are not creator of this board or board is not exist!"
+        });
+        return;
+    }
+    else if(admin?.rows[0].adminid!==userid && boardInfo?.rows.length===0){
+        res.status(403).json({
+            message:"you are not admin of this organisation"
+        });
+        return;
+    }
+    const deleetBoard=connectionpoll.query("DELETE FROM boards WHERE id=$1",[boardid]);
+    if(deleetBoard.rowCount===0){
+        res.status(403).json({
+            message:"Board is not deleted"
+        });
+        return;
+    }
+
+    res.json({
+        // adminId:admin?.rows[0].adminid,
+        message:"Board is deleted"
+    })
+})
+
+// cerate issue by board api  ✅
+app.post("/:boardid/issues",userAuth,async(req,res)=>{
     const issue=req.body.query;
     const userid=req.userid;
     const boardid=req.params.boardid;
