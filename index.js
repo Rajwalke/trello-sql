@@ -311,30 +311,40 @@ app.delete("/organisation/:orgid/boards",userAuth,async(req,res)=>{
     })
 })
 
-// cerate issue by board api  ✅
+// cerate issue by board api ✅
 app.post("/:boardid/issues",userAuth,async(req,res)=>{
-    const issue=req.body.query;
+    const issue=req.body.issue;
     const userid=req.userid;
     const boardid=req.params.boardid;
-    const checkUser=await connectionpoll.query("SELECT * FROM users WHERE userid=$1",[userid]);
-    if(checkUser.rows.length===0){
-        res.status(403).json({
-            message:"user is not valide"
-        });
-        return;
-    }
-    console.log("user is Valide you can go ahe");
-    const issueCreate=await connectionpoll.query("INSERT INTO issues (issue,userid,boardid,status) VALUES ($1,$2,$3,$4) RETURNING id;",[issue,userid,boardid,"pending"]);
-    if(issueCreate.rows.length===0){
-        res.status(403).json({
-            message:"Issue is not create!.."
-        });
-        return;
-    }
-    res.json({
-        id:issueCreate.rows[0].id,
-        message:"Issue is create"
-    });
+    // const orgid=req.params.orgid;
+    // const checkUser=await connectionpoll.query("SELECT * FROM users WHERE userid=$1",[userid]);
+    // if(checkUser.rows.length===0){
+    //     res.status(403).json({
+    //         message:"user is not valide"
+    //     });
+    //     return;
+    // }
+    // console.log("user is Valide you can go ahe");
+    // check tha user is in organisation where board is cerated 
+    // const checkValideUser=await connectionpoll.query("SELECT orgid FROM boards where id=$1 AND SELECT orgid,userid  FROM members WHERE orgid=orgid AND userid=$2",[boardid,userid]);
+    const checkValideUser=await connectionpoll.query(`SELECT * 
+        FROM boards 
+        JOIN members 
+        ON boards.orgid =members.orgid
+        WHERE boards.id=$1 AND members.userid=$2`,[boardid,userid]);
+    console.log(checkValideUser?.rows);
+
+    // const issueCreate=await connectionpoll.query("INSERT INTO issues (issue,userid,boardid,status) VALUES ($1,$2,$3,$4) RETURNING id;",[issue,userid,boardid,"pending"]);
+    // if(issueCreate.rows.length===0){
+    //     res.status(403).json({
+    //         message:"Issue is not create!.."
+    //     });
+    //     return;
+    // }
+    // res.json({
+    //     id:issueCreate.rows[0].id,
+    //     message:"Issue is create"
+    // });
 });
 
 // api that divide task as pending,in progess,done
