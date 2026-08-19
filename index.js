@@ -311,7 +311,7 @@ app.delete("/organisation/:orgid/boards",userAuth,async(req,res)=>{
     })
 })
 
-// cerate issue by board api ✅
+// cerate issue by board  ✅
 app.post("/:boardid/issues",userAuth,async(req,res)=>{
     const issue=req.body.issue;
     const userid=req.userid;
