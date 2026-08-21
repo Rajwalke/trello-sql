@@ -10,7 +10,7 @@ const cookieparser = require('cookie-parser');
 
 
 const connectionpoll = new Pool({
-    connectionString: "postgresql://neondb_owner:npg_a5tSXmRosNY4@ep-sparkling-water-aunkkyvt-pooler.c-10.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+    connectionString: "postgresql://neondb_owner:npg_a5tSXmRosNY4@ep-sparkling-water-aunkkyvt-pooler.c-10.us-east-1.aws.neon.tech/neondb?sslmode=verify-full"
 })
 app.use(express.json());
 app.use(cookieparser())
@@ -313,38 +313,35 @@ app.delete("/organisation/:orgid/boards",userAuth,async(req,res)=>{
 
 // cerate issue by board  ✅
 app.post("/:boardid/issues",userAuth,async(req,res)=>{
-    const issue=req.body.issue;
+    const issue=req.body.issues;
     const userid=req.userid;
     const boardid=req.params.boardid;
-    // const orgid=req.params.orgid;
-    // const checkUser=await connectionpoll.query("SELECT * FROM users WHERE userid=$1",[userid]);
-    // if(checkUser.rows.length===0){
-    //     res.status(403).json({
-    //         message:"user is not valide"
-    //     });
-    //     return;
-    // }
-    // console.log("user is Valide you can go ahe");
-    // check tha user is in organisation where board is cerated 
-    // const checkValideUser=await connectionpoll.query("SELECT orgid FROM boards where id=$1 AND SELECT orgid,userid  FROM members WHERE orgid=orgid AND userid=$2",[boardid,userid]);
+    // boards belongs to organisation ,user should membe rof organsation
     const checkValideUser=await connectionpoll.query(`SELECT * 
         FROM boards 
         JOIN members 
         ON boards.orgid =members.orgid
         WHERE boards.id=$1 AND members.userid=$2`,[boardid,userid]);
-    console.log(checkValideUser?.rows);
+        if(checkValideUser.rows.length===0){
+            res.status(403).json({
+                message:"you are not member or boardid is not belong from organisation"
+            });
+            return;
+        }
+    console.log("Check users",checkValideUser?.rows);
 
     // const issueCreate=await connectionpoll.query("INSERT INTO issues (issue,userid,boardid,status) VALUES ($1,$2,$3,$4) RETURNING id;",[issue,userid,boardid,"pending"]);
-    // if(issueCreate.rows.length===0){
-    //     res.status(403).json({
-    //         message:"Issue is not create!.."
-    //     });
-    //     return;
-    // }
-    // res.json({
-    //     id:issueCreate.rows[0].id,
-    //     message:"Issue is create"
-    // });
+    const issueCreate = await connectionpoll.query("INSERT INTO issues (issue,userid,boardid,status) VALUES($1,$2,$3,$4) RETURNING id;",[issue,userid,boardid,"pending"]);
+    if(issueCreate.rowCount===0){
+        res.status(400).json({
+            message:"Due to some error issue is not cerated."
+        });
+        return;
+    }
+    res.json({
+        IssueId:issueCreate?.rows[0]?.id,
+        message:"Issue is create"
+    });
 });
 
 // api that divide task as pending,in progess,done
