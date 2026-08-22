@@ -344,26 +344,40 @@ app.post("/:boardid/issues",userAuth,async(req,res)=>{
     });
 });
 
-// api that divide task as pending,in progess,done
+// api to get all issues of board ✅
 app.get("/:boardid/issues",userAuth,async(req,res)=>{
     const boardid=req.params.boardid;
-    try{
-        const doneIssues=await connectionpoll.query("SELECT * FROM issues WHERE boardid=$1 AND status='done'",[boardid]);
-        const pendingIssues=await connectionpoll.query("SELECT * FROM issues WHERE boardid=$1 AND status='pending'",[boardid]);
-        const inProgressIssues=await connectionpoll.query("SELECT * FROM issues WHERE boardid=$1 AND status='in_progress'",[boardid]);
-    
-        res.json({
-            doneIssues:doneIssues?.rows,
-            pendingIssues:pendingIssues?.rows,
-            inProgressIssues:inProgressIssues?.rows
-        });
+    const userid=req.userid;
 
-        }catch(err){
-            res.status(403).json({
-            error:err.message
-            })
-        }
-});
+    const valideUser=await connectionpoll.query(`SELECT * 
+        FROM boards JOIN members 
+        on boards.orgid = members.orgid
+        WHERE boards.id=$1 and members.userid=$2
+        `,[boardid,userid]);
+
+    console.log("log",valideUser);
+
+    if(valideUser.rowCount===0){
+        res.status(400).json({
+            message:"you are not from organisation"
+        });
+        return;
+    }
+    
+    const currentBoardIssues=await connectionpoll.query("SELECT * FROM issues WHERE boardid=$1",[boardid]);
+
+    if(currentBoardIssues?.rows?.length===0){
+        res.status(400).json({
+            message:"No issued found of this board"
+        });
+        return;
+    }
+    
+
+    res.json({
+        "issues": currentBoardIssues?.rows
+    })
+})
 
 // edit staus of task
 app.post("/:boardid/:issueid/:status",userAuth,async(req,res)=>{
